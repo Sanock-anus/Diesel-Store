@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>DIESEL | P2P Game Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        body { background: #0b0e14; color: #e9eaeb; font-family: sans-serif; }
+        .diesel-card { background: #161920; border: 1px solid #2a2d33; transition: 0.3s; }
+        .diesel-card:hover { border-color: #4a90e2; }
+    </style>
+</head>
+<body>
+
+    <nav class="border-b border-gray-800 p-4 flex justify-between items-center bg-[#12161c]">
+        <h1 class="text-3xl font-black text-blue-500 tracking-tighter">DIESEL</h1>
+        <div id="auth-controls">
+            <button id="btn-login" onclick="login()" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded font-bold">Войти через Google</button>
+            <div id="user-info" class="hidden items-center gap-4">
+                <span id="user-email" class="text-blue-400 font-mono text-sm"></span>
+                <button onclick="logout()" class="text-xs opacity-50 underline">Выйти</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto p-6 grid grid-cols-1 md:grid-cols-12 gap-8">
+        
+        <div class="md:col-span-8">
+            <h2 class="text-xl font-bold mb-6 uppercase tracking-widest text-gray-400">Витрина Diesel</h2>
+            <div class="grid grid-cols-1 gap-4">
+                <div class="diesel-card p-6 rounded-xl flex justify-between items-center">
+                    <div>
+                        <h3 class="text-2xl font-bold">Cyber Diesel 2025</h3>
+                        <p class="text-gray-500">Эксклюзивная P2P раздача</p>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-xl font-mono text-green-400 mb-2">10.00 USD</div>
+                        <button onclick="buyGame('cyber_diesel_01')" class="bg-white text-black px-6 py-2 rounded-lg font-bold hover:bg-blue-400 transition">КУПИТЬ</button>
+                        <button id="btn-download" onclick="startP2PDownload('cyber_diesel_01')" class="hidden bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">СКАЧАТЬ (P2P)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="md:col-span-4 bg-[#161920] p-6 rounded-2xl border border-dashed border-gray-700">
+            <h2 class="text-lg font-bold mb-2 text-blue-400">Раздача (ПК Создателя)</h2>
+            <p class="text-xs text-gray-500 mb-4">Выберите файл игры, чтобы покупатели могли его скачивать напрямую у вас.</p>
+            
+            <input type="file" id="game-file" class="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor-pointer"/>
+            
+            <div id="status-box" class="mt-6 p-4 bg-black rounded-lg border border-gray-800">
+                <div class="text-[10px] uppercase text-gray-500">Статус системы</div>
+                <div id="p2p-status" class="text-sm font-mono text-yellow-500 mt-1 italic">Ожидание авторизации...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ТВОЙ КОНФИГ
+        const firebaseConfig = {
+            apiKey: "AIzaSyD6WFfRt_S4SSxVr1ivDrM4OrifqAlpnRo",
+            authDomain: "diesel-c8b6a.firebaseapp.com",
+            databaseURL: "https://diesel-c8b6a-default-rtdb.firebaseio.com",
+            projectId: "diesel-c8b6a",
+            storageBucket: "diesel-c8b6a.firebasestorage.app",
+            messagingSenderId: "685123947136",
+            appId: "1:685123947136:web:4252220efd4883039d3465",
+            measurementId: "G-8W1021YBFD"
+        };
+
+        // Инициализация
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+        let peer = null;
+        let selectedFile = null;
+
+        // 1. АВТОРИЗАЦИЯ
+        function login() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider);
+        }
+        function logout() { auth.signOut(); location.reload(); }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                document.getElementById('btn-login').classList.add('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('user-email').innerText = user.email;
+                initP2P(user.uid);
+                checkOwnership(user.uid, 'cyber_diesel_01');
+            }
+        });
+
+        // 2. ИНИЦИАЛИЗАЦИЯ P2P (PeerJS)
+        function initP2P(userId) {
+            peer = new Peer('diesel-peer-' + userId);
+            
+            peer.on('open', (id) => {
+                document.getElementById('p2p-status').innerText = "Готов к раздаче (ID активен)";
+                document.getElementById('p2p-status').classList.replace('text-yellow-500', 'text-green-500');
+            });
+
+            // Обработка входящего подключения (когда покупатель хочет файл)
+            peer.on('connection', (conn) => {
+                conn.on('data', (data) => {
+                    if (data === 'REQUEST_FILE' && selectedFile) {
+                        document.getElementById('p2p-status').innerText = "Передача файла покупателю...";
+                        conn.send({ file: selectedFile, name: selectedFile.name });
+                    }
+                });
+            });
+        }
+
+        // 3. ВЫБОР ФАЙЛА ДЛЯ РАЗДАЧИ
+        document.getElementById('game-file').onchange = (e) => {
+            selectedFile = e.target.files[0];
+            const userId = auth.currentUser.uid;
+            // Сообщаем в базу, что мы (автор) онлайн и раздаем игру
+            db.ref('p2p_signals/cyber_diesel_01').set({
+                hostPeerId: 'diesel-peer-' + userId,
+                active: true
+            });
+            alert("Файл готов к раздаче!");
+        };
+
+        // 4. ПОКУПКА (АНТИПИРАТСТВО)
+        function buyGame(gameId) {
+            const user = auth.currentUser;
+            if (!user) return alert("Войдите в систему!");
+            
+            // Реальная запись в базу о покупке
+            db.ref('users/' + user.uid + '/purchases/' + gameId).set(true)
+            .then(() => {
+                alert("Покупка подтверждена!");
+                checkOwnership(user.uid, gameId);
+            });
+        }
+
+        function checkOwnership(uid, gameId) {
+            db.ref('users/' + uid + '/purchases/' + gameId).once('value', snapshot => {
+                if (snapshot.val() === true) {
+                    document.querySelector('button[onclick*="buyGame"]').classList.add('hidden');
+                    document.getElementById('btn-download').classList.remove('hidden');
+                }
+            });
+        }
+
+        // 5. СКАЧИВАНИЕ P2P
+        function startP2PDownload(gameId) {
+            document.getElementById('p2p-status').innerText = "Поиск продавца в сети...";
+            
+            db.ref('p2p_signals/' + gameId).once('value', snapshot => {
+                const data = snapshot.val();
+                if (!data || !data.active) return alert("Продавец (автор) сейчас не в сети.");
+
+                const conn = peer.connect(data.hostPeerId);
+                conn.on('open', () => {
+                    conn.send('REQUEST_FILE');
+                });
+
+                conn.on('data', (received) => {
+                    const blob = new Blob([received.file]);
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = received.name;
+                    a.click();
+                    document.getElementById('p2p-status').innerText = "Файл успешно получен!";
+                });
+            });
+        }
+    </script>
+</body>
+</html>

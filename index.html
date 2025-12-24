@@ -9,12 +9,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #0b0e14; color: #e9eaeb; font-family: sans-serif; overflow-x: hidden; }
+        body { background: #0b0e14; color: #e9eaeb; font-family: sans-serif; }
         .diesel-card { background: #161920; border: 1px solid #2a2d33; transition: 0.3s; }
         .diesel-input { background: #000; border: 1px solid #333; color: white; padding: 12px; border-radius: 8px; width: 100%; outline: none; }
         .diesel-input:focus { border-color: #3b82f6; }
-        .tab-btn { padding: 10px 20px; border-bottom: 2px solid transparent; color: #666; transition: 0.3s; font-weight: bold; text-transform: uppercase; font-size: 12px; }
-        .tab-btn.active { color: #3b82f6; border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        .tab-btn { padding: 12px 24px; color: #555; font-weight: 900; text-transform: uppercase; font-size: 11px; transition: 0.3s; border-bottom: 2px solid transparent; }
+        .tab-btn.active { color: #3b82f6; border-bottom-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
     </style>
 </head>
 <body class="min-h-screen">
@@ -23,17 +23,17 @@
         <h1 class="text-3xl font-black text-blue-500 tracking-tighter italic">DIESEL</h1>
         <div id="user-info" class="hidden flex items-center gap-4">
             <span id="user-mail" class="text-xs font-mono text-blue-400"></span>
-            <button onclick="auth.signOut()" class="text-[10px] text-gray-500 uppercase">Выйти</button>
+            <button onclick="auth.signOut()" class="text-[10px] text-red-500 font-bold uppercase">Выход</button>
         </div>
     </nav>
 
     <main class="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <div id="auth-screen" class="lg:col-span-12 flex justify-center py-10">
-            <div class="bg-[#161920] p-8 rounded-2xl border border-gray-800 w-full max-w-sm">
-                <h2 class="text-2xl font-bold mb-6 text-center italic">Вход</h2>
+        <div id="auth-screen" class="lg:col-span-12 flex justify-center py-20">
+            <div class="bg-[#161920] p-8 rounded-2xl border border-gray-800 w-full max-w-sm shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-center italic">DIESEL ACCESS</h2>
                 <input type="email" id="auth-email" placeholder="Email" class="diesel-input mb-4">
-                <input type="password" id="auth-pass" placeholder="Пароль" class="diesel-input mb-6">
+                <input type="password" id="auth-pass" placeholder="Password" class="diesel-input mb-6">
                 <div class="flex gap-2">
                     <button onclick="handleAuth('login')" class="w-1/2 bg-blue-600 py-3 rounded-xl font-bold">ВОЙТИ</button>
                     <button onclick="handleAuth('reg')" class="w-1/2 bg-gray-800 py-3 rounded-xl font-bold">РЕГ</button>
@@ -42,50 +42,46 @@
         </div>
 
         <div id="main-app" class="hidden lg:col-span-8 space-y-6">
-            
-            <div class="flex flex-col md:flex-row justify-between items-center gap-4 border-b border-gray-800 pb-2">
-                <div class="flex">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex bg-[#12161c] rounded-lg p-1">
                     <button id="tab-store" onclick="switchTab('store')" class="tab-btn active">Магазин</button>
                     <button id="tab-lib" onclick="switchTab('lib')" class="tab-btn">Библиотека</button>
                 </div>
-                <div class="relative w-full md:w-64">
-                    <input type="text" id="search-input" oninput="syncStore()" placeholder="Поиск игр..." class="bg-[#1c212b] border border-gray-700 rounded-full px-4 py-1 text-sm w-full outline-none focus:border-blue-500">
-                </div>
+                <input type="text" id="search-input" oninput="syncStore()" placeholder="Поиск по названию..." class="bg-[#1c212b] border border-gray-700 rounded-lg px-4 py-2 text-sm w-full md:w-64 outline-none focus:border-blue-500">
             </div>
-
             <div id="game-list" class="grid gap-4"></div>
         </div>
 
         <div id="side-app" class="hidden lg:col-span-4 space-y-6">
             <div class="bg-[#1c212b] p-6 rounded-2xl border border-gray-800">
-                <h3 class="font-bold mb-4 text-blue-400 uppercase text-xs">Загрузить игру</h3>
-                <input type="text" id="g-title" placeholder="Название" class="diesel-input mb-2 text-sm">
-                <input type="number" id="g-price" placeholder="Цена ($)" class="diesel-input mb-4 text-sm">
-                <button onclick="publish()" class="w-full bg-white text-black font-black py-2 rounded-lg hover:bg-blue-400">ОПУБЛИКОВАТЬ</button>
+                <h3 class="font-bold mb-4 text-blue-400 uppercase text-xs tracking-widest">Опубликовать игру</h3>
+                <input type="text" id="g-title" placeholder="Название игры" class="diesel-input mb-2 text-sm">
+                <input type="number" id="g-price" placeholder="Цена в $ (0 = Free)" class="diesel-input mb-4 text-sm">
+                <button onclick="publish()" class="w-full bg-white text-black font-black py-2 rounded-lg hover:bg-blue-400 transition">В КАТАЛОГ</button>
             </div>
 
             <div class="bg-[#161920] p-6 rounded-2xl border border-dashed border-gray-700">
-                <h3 class="font-bold mb-2 text-sm text-center">📡 Статус Сида</h3>
+                <h3 class="font-bold mb-2 text-sm">📡 Раздача (Seed)</h3>
                 <input type="file" id="p2p-file" class="text-xs text-gray-500 mb-4 block w-full">
-                <div id="console" class="bg-black p-3 rounded h-40 overflow-y-auto font-mono text-[10px] text-gray-400 border border-gray-900 italic">
-                    > Система готова...
+                <div id="console" class="bg-black p-3 rounded h-40 overflow-y-auto font-mono text-[10px] text-gray-400 border border-gray-900">
+                    > Инициализация...
                 </div>
             </div>
         </div>
     </main>
 
-    <div id="pay-modal" class="hidden fixed inset-0 bg-black/90 flex justify-center items-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-[#1c212b] p-8 rounded-3xl w-full max-w-sm border border-gray-700 relative">
-            <h2 class="text-xl font-black mb-2 text-center text-blue-500 italic uppercase">Оплата</h2>
-            <p id="pay-info" class="text-[10px] text-gray-500 text-center mb-6 uppercase tracking-widest"></p>
+    <div id="pay-modal" class="hidden fixed inset-0 bg-black/95 flex justify-center items-center z-50 p-4">
+        <div class="bg-[#1c212b] p-8 rounded-3xl w-full max-w-sm border border-gray-700">
+            <h2 class="text-xl font-black mb-1 text-center text-blue-500">ОПЛАТА КАРТОЙ</h2>
+            <p id="pay-details" class="text-[10px] text-center text-gray-500 mb-6 uppercase tracking-tighter"></p>
             <div class="space-y-4">
-                <input type="text" id="card-num" placeholder="0000 0000 0000 0000" class="diesel-input tracking-widest text-center font-bold">
+                <input type="text" id="card-num" placeholder="0000 0000 0000 0000" class="diesel-input text-center tracking-widest">
                 <div class="flex gap-2">
-                    <input type="text" placeholder="MM/YY" class="diesel-input text-center text-sm">
-                    <input type="text" placeholder="CVC" class="diesel-input text-center text-sm">
+                    <input type="text" placeholder="MM/YY" class="diesel-input text-center">
+                    <input type="text" placeholder="CVC" class="diesel-input text-center">
                 </div>
-                <button onclick="processPay()" class="w-full bg-blue-600 py-4 rounded-2xl font-black mt-4 shadow-lg shadow-blue-900/40">КУПИТЬ ИГРУ</button>
-                <button onclick="closePay()" class="w-full text-[10px] text-gray-600 font-bold hover:text-white uppercase transition">Закрыть</button>
+                <button onclick="processPay()" class="w-full bg-blue-600 py-4 rounded-2xl font-black mt-4 shadow-xl">ПОДТВЕРДИТЬ</button>
+                <button onclick="closePay()" class="w-full text-[10px] text-gray-600 font-bold uppercase">Отмена</button>
             </div>
         </div>
     </div>
@@ -117,7 +113,7 @@
         async function handleAuth(t) {
             const e = document.getElementById('auth-email').value;
             const p = document.getElementById('auth-pass').value;
-            if(!e || p.length < 6) return alert("Email и пароль (мин 6 симв)");
+            if(!e || p.length < 6) return alert("Введите корректные данные");
             try {
                 if(t === 'reg') await auth.createUserWithEmailAndPassword(e, p);
                 else await auth.signInWithEmailAndPassword(e, p);
@@ -147,21 +143,21 @@
         function initP2P() {
             peer = new Peer({ config: {'iceServers': [{ url: 'stun:stun.l.google.com:19302' }]} });
             peer.on('open', id => {
-                log("Сеть P2P активна", "text-green-500");
+                log("P2P Соединение: OK", "text-green-500");
                 db.ref(`users/${user.uid}`).update({ peerId: id, online: true });
                 db.ref(`users/${user.uid}/online`).onDisconnect().set(false);
             });
             peer.on('connection', conn => {
                 conn.on('data', data => {
                     if(data.type === 'REQ' && myFile) {
-                        log("Передача: " + myFile.name, "text-blue-400");
+                        log("Отправка файла покупателю...", "text-blue-400");
                         conn.send({ type: 'FILE', file: myFile, name: myFile.name });
                     }
                 });
             });
         }
 
-        document.getElementById('p2p-file').onchange = e => { myFile = e.target.files[0]; log("Файл загружен для сидирования", "text-yellow-500"); };
+        document.getElementById('p2p-file').onchange = e => { myFile = e.target.files[0]; log("Файл готов к раздаче", "text-yellow-500"); };
 
         function publish() {
             const t = document.getElementById('g-title').value;
@@ -172,32 +168,38 @@
         }
 
         function syncStore() {
-            const searchQuery = document.getElementById('search-input').value.toLowerCase();
+            const query = document.getElementById('search-input').value.toLowerCase();
             db.ref('games').on('value', snap => {
                 const list = document.getElementById('game-list');
                 list.innerHTML = '';
                 snap.forEach(child => {
                     const g = child.val();
                     const id = child.key;
-                    const free = parseInt(g.price) === 0;
-
-                    if (!g.title.toLowerCase().includes(searchQuery)) return;
+                    if (!g.title.toLowerCase().includes(query)) return;
 
                     db.ref(`users/${user.uid}/purchases/${id}`).once('value', pSnap => {
-                        const hasAccess = pSnap.exists() || g.author === user.uid || free;
-                        
-                        // Если мы в библиотеке, показываем только купленное/свое
-                        if (activeTab === 'lib' && !hasAccess) return;
+                        const isBought = pSnap.exists();
+                        const isMy = g.author === user.uid;
+                        const isFree = parseInt(g.price) === 0;
 
+                        // Логика отображения
+                        if (activeTab === 'lib') {
+                            if (!isBought && !isMy) return;
+                        } else {
+                            if (isBought || isMy) return;
+                        }
+
+                        const canDownload = isBought || isMy || isFree;
+                        
                         list.innerHTML += `
-                            <div class="diesel-card p-5 rounded-2xl flex justify-between items-center animate-fade-in">
+                            <div class="diesel-card p-5 rounded-2xl flex justify-between items-center border-l-4 ${isMy ? 'border-l-yellow-600' : 'border-l-blue-600'}">
                                 <div>
-                                    <h4 class="text-xl font-bold italic tracking-tight">${g.title}</h4>
-                                    <p class="text-[9px] text-gray-500 uppercase font-mono">ID: ${id.slice(0,12)}</p>
+                                    <h4 class="text-xl font-bold tracking-tighter italic">${g.title}</h4>
+                                    <p class="text-[9px] text-gray-500 uppercase">${isMy ? 'Моя игра' : 'Цена: $' + g.price}</p>
                                 </div>
-                                ${hasAccess ? 
-                                    `<button onclick="download('${id}')" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-xl text-[10px] font-black italic">DOWNLOAD</button>` : 
-                                    `<button onclick="openPay('${id}', ${g.price})" class="bg-white text-black px-6 py-2 rounded-xl text-[10px] font-black hover:bg-green-400">$ ${g.price}</button>`}
+                                ${canDownload ? 
+                                    `<button onclick="download('${id}')" class="bg-blue-600 hover:bg-blue-500 px-6 py-2 rounded-xl text-[10px] font-black italic">СКАЧАТЬ</button>` : 
+                                    `<button onclick="openPay('${id}', ${g.price})" class="bg-white text-black px-6 py-2 rounded-xl text-[10px] font-black hover:bg-green-400">КУПИТЬ $${g.price}</button>`}
                             </div>`;
                     });
                 });
@@ -207,39 +209,43 @@
         function openPay(id, price) { 
             activeId = id; 
             currentPrice = price;
-            const commission = (price * 0.1).toFixed(2);
-            document.getElementById('pay-info').innerText = `Цена: $${price} | Комиссия 10% ($${commission}) → 79940091828`;
+            const comm = (price * 0.1).toFixed(2);
+            document.getElementById('pay-details').innerText = `Сумма: $${price} | Комиссия 10% ($${comm}) на 79940091828`;
             document.getElementById('pay-modal').classList.remove('hidden'); 
         }
         function closePay() { document.getElementById('pay-modal').classList.add('hidden'); }
         
         async function processPay() {
-            if(document.getElementById('card-num').value.length < 16) return alert("Введите 16 цифр карты");
+            const card = document.getElementById('card-num').value.replace(/\s/g, '');
+            if(card.length < 16) return alert("Введите 16 цифр карты");
             
             const comm = (currentPrice * 0.1).toFixed(2);
-            log(`Транзакция: $${currentPrice}. Комиссия $${comm} отправлена на 79940091828`, "text-green-400");
+            log(`Транзакция $${currentPrice}. Комиссия $${comm} → 79940091828`, "text-green-400");
             
             await db.ref(`users/${user.uid}/purchases/${activeId}`).set(true);
             closePay();
-            log("Добавлено в библиотеку!", "text-green-500");
+            switchTab('lib'); // Сразу кидаем в библиотеку
+            log("Покупка завершена! Игра в библиотеке.", "text-green-500");
         }
 
         async function download(id) {
-            log("Связь с библиотекой...", "text-yellow-500");
+            log("Запрос к сиду...", "text-yellow-500");
             const g = (await db.ref(`games/${id}`).get()).val();
+            
             if(g.author === user.uid && myFile) {
                 const a = document.createElement('a'); a.href = URL.createObjectURL(myFile); a.download = myFile.name; a.click();
                 return;
             }
+
             const u = (await db.ref(`users/${g.author}`).get()).val();
-            if(!u || !u.online) return alert("Автор сейчас не раздает игру.");
+            if(!u || !u.online) return alert("Сид оффлайн. Скачивание невозможно.");
+
             const conn = peer.connect(u.peerId);
-            conn.on('open', () => { log("Сид найден. Качаю..."); conn.send({ type: 'REQ' }); });
+            conn.on('open', () => { log("Канал открыт. Получение..."); conn.send({ type: 'REQ' }); });
             conn.on('data', data => {
                 if(data.type === 'FILE') {
-                    const b = new Blob([data.file]);
-                    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = data.name; a.click();
-                    log("Установка завершена.", "text-green-500");
+                    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([data.file])); a.download = data.name; a.click();
+                    log("Файл получен!", "text-green-500");
                 }
             });
         }

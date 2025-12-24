@@ -2,90 +2,81 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>DIESEL | Email Auth</title>
+    <title>DIESEL | P2P Cloud Store</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { background: #0b0e14; color: #e9eaeb; font-family: sans-serif; }
-        .diesel-input { background: #1c212b; border: 1px solid #2a2d33; color: white; padding: 8px; width: 100%; border-radius: 4px; outline: none; transition: 0.3s; }
+        body { background: #0b0e14; color: #e9eaeb; font-family: 'Segoe UI', sans-serif; }
+        .diesel-card { background: #161920; border: 1px solid #2a2d33; transition: 0.3s; }
+        .diesel-input { background: #000; border: 1px solid #333; color: white; padding: 10px; border-radius: 6px; width: 100%; outline: none; }
         .diesel-input:focus { border-color: #3b82f6; }
-        .diesel-btn { transition: 0.2s; }
-        .diesel-btn:active { transform: scale(0.98); }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
     </style>
 </head>
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen">
 
-    <nav class="border-b border-gray-800 p-4 bg-[#12161c]">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-4">
-                <h1 class="text-3xl font-black text-blue-500 tracking-tighter">DIESEL</h1>
-                <span id="connection-status" class="text-xs font-mono text-gray-500 border border-gray-700 px-2 py-1 rounded">🔴 Оффлайн</span>
+    <nav class="border-b border-gray-800 p-4 bg-[#12161c] flex justify-between items-center shadow-xl">
+        <div class="flex items-center gap-4">
+            <h1 class="text-3xl font-black text-blue-500 tracking-tighter italic">DIESEL</h1>
+            <div id="status-dot" class="flex items-center gap-2 text-[10px] uppercase tracking-widest text-gray-500">
+                <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span> Offline
             </div>
-
-            <div id="user-panel" class="hidden flex items-center gap-4">
-                <div class="text-right">
-                    <div id="user-email-display" class="text-sm font-bold text-white"></div>
-                    <div class="text-[10px] text-green-400">ONLINE</div>
-                </div>
-                <button onclick="logout()" class="text-xs text-red-400 border border-red-900 px-3 py-1 rounded hover:bg-red-900/20">Выйти</button>
-            </div>
+        </div>
+        <div id="user-info" class="hidden text-right">
+            <p id="display-email" class="text-xs font-bold text-blue-400"></p>
+            <button onclick="logout()" class="text-[10px] uppercase text-gray-500 hover:text-white transition">Выйти</button>
         </div>
     </nav>
 
-    <main class="container mx-auto p-6 flex-grow grid grid-cols-1 md:grid-cols-12 gap-8">
+    <main class="container mx-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
         
-        <div id="auth-form-container" class="md:col-span-12 flex justify-center items-center h-64">
-            <div class="bg-[#161920] p-8 rounded-xl border border-gray-700 w-full max-w-md shadow-2xl">
-                <h2 class="text-xl font-bold mb-4 text-center">Вход в Diesel</h2>
-                <div class="space-y-3">
-                    <input type="email" id="email" placeholder="Email" class="diesel-input">
-                    <input type="password" id="password" placeholder="Пароль" class="diesel-input">
-                    <div class="flex gap-2 pt-2">
-                        <button onclick="emailLogin()" class="diesel-btn w-1/2 bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 rounded">Войти</button>
-                        <button onclick="emailRegister()" class="diesel-btn w-1/2 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 rounded">Регистрация</button>
-                    </div>
-                    <p id="auth-error" class="text-red-500 text-xs text-center mt-2"></p>
+        <div id="auth-box" class="lg:col-span-12 flex justify-center py-20">
+            <div class="bg-[#161920] p-8 rounded-2xl border border-gray-800 w-full max-w-sm shadow-2xl">
+                <h2 class="text-2xl font-bold mb-6 text-center">Вход в систему</h2>
+                <input type="email" id="email" placeholder="Email" class="diesel-input mb-4">
+                <input type="password" id="password" placeholder="Пароль" class="diesel-input mb-6">
+                <div class="flex gap-2">
+                    <button onclick="authAction('login')" class="w-1/2 bg-blue-600 hover:bg-blue-500 py-3 rounded-xl font-bold transition">Войти</button>
+                    <button onclick="authAction('reg')" class="w-1/2 bg-gray-800 hover:bg-gray-700 py-3 rounded-xl font-bold transition text-sm text-gray-300">Регистрация</button>
                 </div>
+                <p id="auth-err" class="text-red-500 text-[10px] mt-4 text-center"></p>
             </div>
         </div>
 
-        <div id="main-content" class="hidden md:col-span-12 grid grid-cols-1 md:grid-cols-12 gap-8 w-full">
-            
-            <div class="md:col-span-8">
-                <div class="flex justify-between items-end mb-6">
-                    <h2 class="text-xl font-bold uppercase tracking-widest text-gray-400">Магазин игр</h2>
-                    <button onclick="refreshGames()" class="text-xs text-blue-400 hover:underline">🔄 Обновить</button>
+        <div id="diesel-app" class="hidden lg:col-span-8 space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-xl font-black uppercase italic text-gray-400">Каталог игр</h2>
+                <div class="text-[10px] text-gray-600">ОБНОВЛЯЕТСЯ В РЕАЛЬНОМ ВРЕМЕНИ</div>
+            </div>
+            <div id="store-list" class="grid gap-4">
                 </div>
-                <div id="games-container" class="grid grid-cols-1 gap-4">
-                    <p class="text-gray-500">Загрузка...</p>
-                </div>
+        </div>
+
+        <div id="diesel-side" class="hidden lg:col-span-4 space-y-6">
+            <div class="bg-[#1c212b] p-6 rounded-2xl border border-gray-800 shadow-lg">
+                <h3 class="font-bold mb-4 flex items-center gap-2">
+                    <span class="text-blue-500 text-xl">🚀</span> Опубликовать игру
+                </h3>
+                <input type="text" id="g-title" placeholder="Название игры" class="diesel-input mb-3 text-sm">
+                <input type="number" id="g-price" placeholder="Цена в $" class="diesel-input mb-4 text-sm">
+                <button onclick="publishGame()" class="w-full bg-white text-black font-black py-2 rounded-lg hover:bg-blue-400 transition uppercase text-xs">Разместить в облаке</button>
             </div>
 
-            <div class="md:col-span-4 space-y-6">
-                <div class="bg-[#1c212b] p-5 rounded-xl border border-gray-800">
-                    <h3 class="font-bold text-white mb-2 text-sm">🛠 Создать игру</h3>
-                    <input type="text" id="new-game-title" placeholder="Название" class="diesel-input mb-2 text-sm">
-                    <input type="number" id="new-game-price" placeholder="Цена ($)" class="diesel-input mb-2 text-sm">
-                    <button onclick="publishGame()" class="w-full bg-blue-900/50 hover:bg-blue-900 text-blue-200 py-1 rounded text-sm border border-blue-800">Опубликовать</button>
-                </div>
-
-                <div class="bg-[#161920] p-5 rounded-xl border border-dashed border-gray-600">
-                    <h3 class="font-bold text-green-400 mb-2 text-sm">📡 Раздать файл</h3>
-                    <input type="file" id="host-file" class="block w-full text-xs text-gray-400 mb-2"/>
-                    <div id="p2p-log" class="text-[10px] font-mono text-gray-500 h-24 overflow-y-auto bg-black p-2 rounded border border-gray-800">
-                        > Ожидание действий...
-                    </div>
+            <div class="bg-[#161920] p-6 rounded-2xl border border-dashed border-gray-700">
+                <h3 class="font-bold mb-2 text-sm">📡 Раздача (Seed)</h3>
+                <input type="file" id="seed-file" class="text-xs text-gray-500 mb-4 block w-full">
+                <div id="log" class="bg-black/50 p-3 rounded-lg h-32 overflow-y-auto font-mono text-[10px] text-gray-400 border border-gray-900">
+                    > Ожидание авторизации...
                 </div>
             </div>
         </div>
-
     </main>
 
     <script>
-        // --- 1. ТВОИ КЛЮЧИ ---
         const firebaseConfig = {
             apiKey: "AIzaSyD6WFfRt_S4SSxVr1ivDrM4OrifqAlpnRo",
             authDomain: "diesel-c8b6a.firebaseapp.com",
@@ -99,188 +90,125 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.database();
-        
-        let currentUser = null;
-        let peer = null;
-        let hostedFile = null;
+        let currentU = null, peer = null, myFile = null;
 
-        function log(msg, color = 'text-gray-500') {
-            const box = document.getElementById('p2p-log');
-            box.innerHTML += `<div class="${color}">> ${msg}</div>`;
-            box.scrollTop = box.scrollHeight;
+        const writeLog = (m, c = 'text-gray-500') => {
+            const l = document.getElementById('log');
+            l.innerHTML += `<div class="${c}">> ${m}</div>`;
+            l.scrollTop = l.scrollHeight;
         }
 
-        // --- 2. НОВАЯ ЛОГИКА АВТОРИЗАЦИИ (EMAIL/PASS) ---
-        
-        function getAuthData() {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('password').value;
-            return { email, pass };
+        // --- АУТЕНТИФИКАЦИЯ ---
+        async function authAction(t) {
+            const e = document.getElementById('email').value;
+            const p = document.getElementById('password').value;
+            if(!e || !p) return;
+            try {
+                if(t === 'reg') await auth.createUserWithEmailAndPassword(e, p);
+                else await auth.signInWithEmailAndPassword(e, p);
+            } catch(err) { document.getElementById('auth-err').innerText = err.message; }
         }
 
-        function emailRegister() {
-            const { email, pass } = getAuthData();
-            if(!email || !pass) return alert("Введите почту и пароль");
-            
-            auth.createUserWithEmailAndPassword(email, pass)
-                .then((userCredential) => {
-                    log("Аккаунт создан!", "text-green-500");
-                })
-                .catch((error) => {
-                    document.getElementById('auth-error').innerText = error.message;
-                });
-        }
+        function logout() { auth.signOut(); location.reload(); }
 
-        function emailLogin() {
-            const { email, pass } = getAuthData();
-            if(!email || !pass) return alert("Введите почту и пароль");
-
-            auth.signInWithEmailAndPassword(email, pass)
-                .catch((error) => {
-                    document.getElementById('auth-error').innerText = "Ошибка: " + error.message;
-                });
-        }
-
-        function logout() { auth.signOut(); }
-
-        // Слушатель состояния входа
         auth.onAuthStateChanged(user => {
-            if (user) {
-                currentUser = user;
-                // Скрываем форму входа, показываем контент
-                document.getElementById('auth-form-container').classList.add('hidden');
-                document.getElementById('main-content').classList.remove('hidden');
-                document.getElementById('user-panel').classList.remove('hidden');
-                document.getElementById('user-email-display').innerText = user.email;
-
-                initPeerJS();
-                loadGamesFromFirebase();
-            } else {
-                // Показываем форму входа
-                document.getElementById('auth-form-container').classList.remove('hidden');
-                document.getElementById('main-content').classList.add('hidden');
-                document.getElementById('user-panel').classList.add('hidden');
-                document.getElementById('connection-status').innerText = "🔴 Оффлайн";
+            if(user) {
+                currentU = user;
+                document.getElementById('auth-box').classList.add('hidden');
+                document.getElementById('diesel-app').classList.remove('hidden');
+                document.getElementById('diesel-side').classList.remove('hidden');
+                document.getElementById('user-info').classList.remove('hidden');
+                document.getElementById('display-email').innerText = user.email;
+                initP2P();
+                loadStore();
             }
         });
 
-        // --- 3. ЛОГИКА МАГАЗИНА ---
-        function loadGamesFromFirebase() {
-            const container = document.getElementById('games-container');
-            db.ref('games').on('value', (snapshot) => {
-                container.innerHTML = '';
-                const games = snapshot.val();
-                if (!games) { container.innerHTML = '<p class="text-gray-500">Игр нет.</p>'; return; }
+        // --- P2P СЕТЬ ---
+        function initP2P() {
+            // Настройка STUN для обхода NAT (исправляет ошибку webrtc)
+            peer = new Peer({
+                config: {'iceServers': [{ url: 'stun:stun.l.google.com:19302' }]}
+            });
 
-                Object.keys(games).forEach(key => {
-                    const game = games[key];
-                    const isOwner = currentUser.uid === game.authorId;
-                    
-                    db.ref(`users/${currentUser.uid}/purchases/${key}`).once('value', (purchSnap) => {
-                        const isPurchased = purchSnap.exists();
-                        renderGameCard(key, game, isPurchased, isOwner);
+            peer.on('open', id => {
+                document.getElementById('status-dot').innerHTML = '<span class="w-2 h-2 rounded-full bg-green-500"></span> Online';
+                writeLog("ID сети активен: " + id, "text-green-500");
+                db.ref(`users/${currentU.uid}`).update({ peerId: id, online: true });
+                db.ref(`users/${currentU.uid}/online`).onDisconnect().set(false);
+            });
+
+            peer.on('connection', conn => {
+                conn.on('data', data => {
+                    if(data.type === 'REQ' && myFile) {
+                        writeLog("Передаю файл: " + myFile.name, "text-blue-400");
+                        conn.send({ file: myFile, name: myFile.name });
+                    }
+                });
+            });
+
+            peer.on('error', e => writeLog("Ошибка P2P: " + e.type, "text-red-500"));
+        }
+
+        document.getElementById('seed-file').onchange = e => {
+            myFile = e.target.files[0];
+            writeLog("Файл готов к раздаче: " + myFile.name, "text-yellow-500");
+        };
+
+        // --- МАГАЗИН ---
+        function publishGame() {
+            const t = document.getElementById('g-title').value;
+            const p = document.getElementById('g-price').value;
+            if(!t) return;
+            db.ref('games').push().set({ title: t, price: p, author: currentU.uid });
+            document.getElementById('g-title').value = '';
+        }
+
+        function loadStore() {
+            db.ref('games').on('value', snap => {
+                const list = document.getElementById('store-list');
+                list.innerHTML = '';
+                const data = snap.val();
+                if(!data) return;
+                Object.keys(data).forEach(id => {
+                    const g = data[id];
+                    db.ref(`users/${currentU.uid}/purchases/${id}`).once('value', pSnap => {
+                        const bought = pSnap.exists() || g.author === currentU.uid;
+                        list.innerHTML += `
+                            <div class="diesel-card p-4 rounded-xl flex justify-between items-center shadow-lg border-l-4 ${bought ? 'border-l-blue-500' : 'border-l-transparent'}">
+                                <div>
+                                    <h4 class="font-black text-lg tracking-tight">${g.title}</h4>
+                                    <p class="text-[10px] text-gray-600 uppercase">Vendor: ${g.author.slice(0,8)}</p>
+                                </div>
+                                ${bought ? 
+                                    `<button onclick="download('${id}')" class="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-lg text-xs font-bold transition">СКАЧАТЬ</button>` : 
+                                    `<button onclick="buy('${id}')" class="bg-white text-black px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-400 transition">$ ${g.price}</button>`
+                                }
+                            </div>`;
                     });
                 });
             });
         }
 
-        function renderGameCard(id, game, bought, owner) {
-            let btn = `<button onclick="buyGame('${id}', ${game.price})" class="bg-gray-200 text-black px-4 py-1 rounded font-bold hover:bg-white text-sm">Купить $${game.price}</button>`;
-            
-            if (bought || owner) {
-                btn = `<button onclick="downloadGame('${id}')" class="bg-blue-600 text-white px-4 py-1 rounded font-bold hover:bg-blue-500 text-sm">⬇ Скачать</button>`;
-            }
-
-            const html = `
-                <div class="diesel-card p-4 rounded-lg flex justify-between items-center border border-gray-800 bg-[#161920]">
-                    <div>
-                        <div class="font-bold text-lg">${game.title}</div>
-                        <div class="text-xs text-gray-500">${owner ? 'Ваша игра' : 'Автор: ID ' + game.authorId.slice(0,5)}...</div>
-                    </div>
-                    ${btn}
-                </div>`;
-            document.getElementById('games-container').innerHTML += html;
+        function buy(id) {
+            if(confirm("Подтвердить покупку?")) db.ref(`users/${currentU.uid}/purchases/${id}`).set(true);
         }
 
-        function publishGame() {
-            const title = document.getElementById('new-game-title').value;
-            const price = document.getElementById('new-game-price').value;
-            if(!title) return;
+        async function download(id) {
+            writeLog("Ищу сида...", "text-yellow-500");
+            const g = (await db.ref(`games/${id}`).get()).val();
+            const u = (await db.ref(`users/${g.author}`).get()).val();
 
-            db.ref('games').push().set({
-                title: title,
-                price: price,
-                authorId: currentUser.uid
-            });
-            document.getElementById('new-game-title').value = '';
-        }
+            if(!u || !u.online) return alert("Автор сейчас не раздает игру (Offline)");
 
-        function buyGame(gameId, price) {
-            if(!confirm(`Купить за $${price}?`)) return;
-            db.ref(`users/${currentUser.uid}/purchases/${gameId}`).set(true);
-        }
-
-        // --- 4. P2P (PEERJS) ---
-        function initPeerJS() {
-            document.getElementById('connection-status').innerText = "🟡 P2P...";
-            
-            // Создаем Peer без ID, сервер даст нам его сам (так надежнее)
-            peer = new Peer();
-
-            peer.on('open', (id) => {
-                document.getElementById('connection-status').innerText = "🟢 P2P Активен";
-                document.getElementById('connection-status').classList.replace('text-gray-500', 'text-green-500');
-                log("Ваш ID сети: " + id);
-
-                // Сохраняем ID в профиль, чтобы другие могли нас найти
-                db.ref(`users/${currentUser.uid}`).update({
-                    peerId: id,
-                    online: true
-                });
-                db.ref(`users/${currentUser.uid}/online`).onDisconnect().set(false);
-            });
-
-            peer.on('error', (err) => {
-                document.getElementById('connection-status').innerText = "🔴 P2P Ошибка";
-                log("Err: " + err.type, "text-red-500");
-            });
-
-            // РАЗДАЧА
-            document.getElementById('host-file').onchange = (e) => {
-                hostedFile = e.target.files[0];
-                log(`Файл ${hostedFile.name} выбран`, "text-yellow-400");
-            };
-
-            peer.on('connection', (conn) => {
-                conn.on('data', (data) => {
-                    if (data.type === 'REQ' && hostedFile) {
-                        log("Отправка файла...", "text-blue-400");
-                        conn.send({ file: hostedFile, name: hostedFile.name });
-                    }
-                });
-            });
-        }
-
-        // СКАЧИВАНИЕ
-        async function downloadGame(gameId) {
-            log("Поиск автора...", "text-yellow-500");
-            const gSnap = await db.ref(`games/${gameId}`).get();
-            const authorId = gSnap.val().authorId;
-
-            const uSnap = await db.ref(`users/${authorId}`).get();
-            const userData = uSnap.val();
-
-            if (!userData || !userData.online || !userData.peerId) {
-                return alert("Автор сейчас не в сети. Попробуйте позже.");
-            }
-
-            const conn = peer.connect(userData.peerId);
+            const conn = peer.connect(u.peerId);
             conn.on('open', () => conn.send({ type: 'REQ' }));
-            conn.on('data', (data) => {
-                log("Файл получен!", "text-green-500");
-                const url = URL.createObjectURL(new Blob([data.file]));
+            conn.on('data', data => {
                 const a = document.createElement('a');
-                a.href = url; a.download = data.name; a.click();
+                a.href = URL.createObjectURL(new Blob([data.file]));
+                a.download = data.name;
+                a.click();
+                writeLog("Загрузка завершена!", "text-green-500");
             });
         }
     </script>

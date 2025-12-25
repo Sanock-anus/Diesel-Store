@@ -2,544 +2,115 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>DIESEL P2P | Decentralized Store</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diesel Game Store - My Server</title>
     <style>
-        body { 
-            background: linear-gradient(135deg, #0c0f17 0%, #1a1e2d 100%); 
-            color: #e9eaeb; 
-            font-family: 'Inter', sans-serif; 
-        }
-        .steam-card { 
-            background: rgba(23, 26, 33, 0.9); 
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            border-radius: 12px;
-        }
-        .steam-input { 
-            background: rgba(0, 0, 0, 0.6); 
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            color: white; 
-            padding: 12px; 
-            border-radius: 8px; 
-            width: 100%; 
-            outline: none;
-        }
-        .steam-input:focus { border-color: #3b82f6; }
-        .tab-btn { padding: 12px 20px; cursor: pointer; color: #9ca3af; font-weight: 600; }
-        .tab-btn.active { color: #3b82f6; border-bottom: 2px solid #3b82f6; }
-        .gradient-text {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        /* Анимация статуса онлайн */
-        .online-dot {
-            height: 10px; width: 10px; background-color: #22c55e; border-radius: 50%;
-            box-shadow: 0 0 10px #22c55e;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
+        :root { --main: #ff4500; --dark: #1a1a1a; --text: #ffffff; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--dark); color: var(--text); margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--main); padding-bottom: 10px; }
+        .game-card { background: #2a2a2a; border-radius: 10px; padding: 15px; margin: 15px 0; display: flex; gap: 20px; }
+        .game-card img { width: 150px; height: 150px; object-fit: cover; border-radius: 8px; }
+        .btn { background: var(--main); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; text-decoration: none; }
+        .form-group { margin: 10px 0; display: flex; flex-direction: column; }
+        input, textarea { padding: 10px; border-radius: 5px; border: 1px solid #444; background: #333; color: white; }
     </style>
 </head>
-<body class="min-h-screen">
-
-    <nav class="sticky top-0 z-50 bg-black/80 backdrop-blur-xl border-b border-white/10">
-        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-black tracking-tighter flex items-center gap-2">
-                <span class="gradient-text">DIESEL</span> P2P
-                <div id="connection-status" class="hidden text-xs px-2 py-1 rounded bg-red-500/20 text-red-400 font-mono">OFFLINE</div>
-            </h1>
-            <div id="user-info" class="hidden flex items-center gap-4">
-                <span id="my-peer-id" class="text-xs font-mono text-gray-500 hidden md:block" title="My Peer ID"></span>
-                <span id="user-mail" class="text-sm font-bold"></span>
-                <button onclick="auth.signOut()" class="text-red-400 hover:text-red-300 text-sm">Выход</button>
-            </div>
-        </div>
-    </nav>
-
-    <div id="auth-screen" class="min-h-[80vh] flex items-center justify-center p-4">
-        <div class="steam-card p-8 w-full max-w-md space-y-4">
-            <h2 class="text-3xl font-bold text-center mb-6">Вход в сеть</h2>
-            <input type="email" id="auth-email" placeholder="Email" class="steam-input">
-            <input type="password" id="auth-pass" placeholder="Пароль" class="steam-input">
-            <div class="flex gap-2">
-                <button onclick="handleAuth('login')" class="flex-1 bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-bold transition">Войти</button>
-                <button onclick="handleAuth('reg')" class="flex-1 bg-white/10 hover:bg-white/20 py-3 rounded-lg font-bold transition">Регистрация</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="main-app" class="hidden container mx-auto px-4 py-8">
-        <div class="flex border-b border-white/10 mb-8 overflow-x-auto">
-            <div id="tab-store" onclick="switchTab('store')" class="tab-btn active">🎮 Магазин</div>
-            <div id="tab-lib" onclick="switchTab('lib')" class="tab-btn">📚 Библиотека</div>
-            <div id="tab-dev" onclick="switchTab('dev')" class="tab-btn">📡 Раздача (Dev)</div>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>DIESEL STORE <small>(Local Server)</small></h1>
+            <button class="btn" onclick="showUploadForm()">Опубликовать игру</button>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div class="lg:col-span-2 space-y-6">
-                <div id="dev-panel" class="hidden space-y-6">
-                    <div class="steam-card p-6">
-                        <h3 class="text-xl font-bold mb-4">🚀 Опубликовать новую игру</h3>
-                        <div class="space-y-4">
-                            <input type="text" id="g-title" placeholder="Название" class="steam-input">
-                            <textarea id="g-desc" placeholder="Описание" class="steam-input h-24"></textarea>
-                            <input type="number" id="g-price" placeholder="Цена (0 = бесплатно)" class="steam-input">
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-sm text-gray-400 mb-1 block">Обложка (в облако):</label>
-                                    <input type="file" id="g-image" accept="image/*" class="steam-input text-sm">
-                                </div>
-                                <div>
-                                    <label class="text-sm text-green-400 mb-1 block">Файл игры (остается у вас):</label>
-                                    <input type="file" id="g-file" class="steam-input text-sm border-green-500/50">
-                                </div>
-                            </div>
-
-                            <div class="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-lg text-sm text-yellow-200">
-                                ⚠️ <b>Внимание:</b> Файл игры не загружается на сервер. Вы должны держать вкладку открытой, чтобы пользователи могли скачать игру с вашего ПК.
-                            </div>
-
-                            <button onclick="publishGame()" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold transition">
-                                Опубликовать и начать раздачу
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="steam-card p-6">
-                        <h3 class="text-xl font-bold mb-4">📡 Центр раздачи</h3>
-                        <p class="text-sm text-gray-400 mb-4">Здесь список ваших игр. Если вы обновили страницу, нужно снова выбрать файл, чтобы встать на раздачу.</p>
-                        <div id="seeding-list" class="space-y-3"></div>
-                    </div>
-                </div>
-
-                <div id="game-list" class="grid gap-4"></div>
+        <div id="uploadForm" style="display:none; background: #222; padding: 20px; border-radius: 10px; margin-top: 20px;">
+            <h3>Добавить новую игру</h3>
+            <div class="form-group">
+                <label>Название игры</label>
+                <input type="text" id="title" placeholder="Например: Mortal Kombat">
             </div>
-
-            <div class="space-y-6">
-                <div class="steam-card p-6">
-                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
-                        <div id="p2p-indicator" class="w-3 h-3 rounded-full bg-red-500"></div>
-                        Статус сети
-                    </h3>
-                    <div class="text-sm space-y-2 text-gray-400">
-                        <p>Ваш ID: <span id="display-peer-id" class="font-mono text-white select-all">...</span></p>
-                        <p>Раздается файлов: <span id="hosting-count" class="text-white">0</span></p>
-                        <p>Активные подключения: <span id="conn-count" class="text-white">0</span></p>
-                    </div>
-                </div>
-
-                <div class="steam-card p-4 bg-black/80 font-mono text-xs h-64 overflow-y-auto" id="console">
-                    <div class="text-green-500">> System initialized...</div>
-                </div>
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea id="desc" rows="3"></textarea>
             </div>
+            <div class="form-group">
+                <label>Прямая ссылка на файл (из твоего FileBrowser)</label>
+                <input type="text" id="fileUrl" placeholder="http://192.168.0.12:8080/...">
+            </div>
+            <div class="form-group">
+                <label>Ссылка на обложку (картинку)</label>
+                <input type="text" id="coverUrl" placeholder="https://...">
+            </div>
+            <button class="btn" onclick="saveGame()">Сохранить на сервер</button>
+            <button class="btn" style="background:#555" onclick="this.parentElement.style.display='none'">Отмена</button>
         </div>
-    </div>
 
-    <div id="download-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center z-[60]">
-        <div class="steam-card p-8 max-w-md w-full text-center">
-            <h2 class="text-2xl font-bold mb-2">📥 P2P Загрузка</h2>
-            <p id="dl-status" class="text-gray-400 mb-6 text-sm">Установка соединения с владельцем...</p>
-            
-            <div class="w-full bg-white/10 rounded-full h-4 mb-2 overflow-hidden">
-                <div id="dl-bar" class="bg-blue-500 h-full w-0 transition-all duration-200"></div>
-            </div>
-            <div class="flex justify-between text-xs text-gray-500 font-mono mb-6">
-                <span id="dl-percent">0%</span>
-                <span id="dl-speed">0 MB/s</span>
-            </div>
-
-            <button onclick="document.getElementById('download-modal').classList.add('hidden')" class="bg-white/10 hover:bg-white/20 py-2 px-6 rounded-lg transition">
-                Свернуть
-            </button>
+        <div id="gamesList">
+            <p>Загрузка игр с вашего ноутбука...</p>
         </div>
     </div>
 
     <script>
-        // --- КОНФИГУРАЦИЯ ---
-        const firebaseConfig = {
-            apiKey: "AIzaSyD6WFfRt_S4SSxVr1ivDrM4OrifqAlpnRo",
-            authDomain: "diesel-c8b6a.firebaseapp.com",
-            databaseURL: "https://diesel-c8b6a-default-rtdb.firebaseio.com",
-            projectId: "diesel-c8b6a",
-            storageBucket: "diesel-c8b6a.firebasestorage.app",
-            messagingSenderId: "685123947136",
-            appId: "1:685123947136:web:4252220efd4883039d3465"
-        };
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.database();
-        const storage = firebase.storage();
+        // АДРЕС ТВОЕГО НОУТБУКА (замени на localtunnel если нужно)
+        const SERVER_URL = "http://192.168.0.12:3000"; 
 
-        // --- ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ---
-        let user = null;
-        let peer = null; // Объект PeerJS
-        let hostedFiles = {}; // { gameId: FileObject } - здесь храним файлы в RAM
-        let activeTab = 'store';
-
-        // --- ЛОГИРОВАНИЕ ---
-        const log = (msg, type = 'info') => {
-            const colors = { info: 'text-gray-400', success: 'text-green-400', error: 'text-red-400', warn: 'text-yellow-400' };
-            const c = document.getElementById('console');
-            c.innerHTML += `<div class="${colors[type]} mb-1">> ${msg}</div>`;
-            c.scrollTop = c.scrollHeight;
-        };
-
-        // --- АВТОРИЗАЦИЯ ---
-        auth.onAuthStateChanged(u => {
-            if (u) {
-                user = u;
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('user-info').classList.remove('hidden');
-                document.getElementById('user-mail').innerText = u.email;
-                initP2P();
-                loadGames();
-                loadMySeedingList();
-            } else {
-                location.reload();
-            }
-        });
-
-        async function handleAuth(type) {
-            const e = document.getElementById('auth-email').value;
-            const p = document.getElementById('auth-pass').value;
-            try {
-                if (type === 'reg') await auth.createUserWithEmailAndPassword(e, p);
-                else await auth.signInWithEmailAndPassword(e, p);
-            } catch (err) { alert(err.message); }
+        function showUploadForm() {
+            document.getElementById('uploadForm').style.display = 'block';
         }
 
-        // --- P2P СИСТЕМА (PEERJS) ---
-        function initP2P() {
-            // Создаем Peer ID на основе User ID (чтобы он был постоянным для поиска)
-            // Заменяем символы, недопустимые для PeerJS
-            const cleanId = user.uid.replace(/[^a-zA-Z0-9]/g, '');
-            peer = new Peer(cleanId, {
-                config: { 'iceServers': [{ url: 'stun:stun.l.google.com:19302' }] }
-            });
-
-            peer.on('open', (id) => {
-                log(`P2P Сеть готова. Ваш ID: ${id}`, 'success');
-                document.getElementById('display-peer-id').innerText = id;
-                document.getElementById('p2p-indicator').classList.remove('bg-red-500');
-                document.getElementById('p2p-indicator').classList.add('online-dot');
-                
-                // Обновляем статус в БД, что мы онлайн
-                db.ref(`users/${user.uid}`).update({ 
-                    online: true, 
-                    peerId: id,
-                    lastSeen: firebase.database.ServerValue.TIMESTAMP 
-                });
-            });
-
-            // ОБРАБОТКА ВХОДЯЩИХ ПОДКЛЮЧЕНИЙ (РАЗДАЧА)
-            peer.on('connection', (conn) => {
-                conn.on('open', () => {
-                    log(`🔗 Входящее подключение от ${conn.peer}`, 'info');
-                    updateConnCount(1);
-                });
-
-                conn.on('data', (data) => {
-                    // Клиент запрашивает файл
-                    if (data.type === 'REQUEST_FILE' && data.gameId) {
-                        handleFileRequest(conn, data.gameId);
-                    }
-                });
-
-                conn.on('close', () => updateConnCount(-1));
-            });
-
-            peer.on('error', err => log(`P2P Ошибка: ${err.type}`, 'error'));
-        }
-
-        // Функция отправки файла (Серверная часть P2P)
-        async function handleFileRequest(conn, gameId) {
-            const file = hostedFiles[gameId];
-            
-            if (!file) {
-                conn.send({ type: 'ERROR', message: 'Файл не найден на компьютере хоста' });
-                log(`❌ Запрос на игру ${gameId}, но файла нет в памяти`, 'error');
-                return;
-            }
-
-            log(`📤 Начало отдачи файла: ${file.name}`, 'success');
-            conn.send({ 
-                type: 'META', 
-                size: file.size, 
-                name: file.name,
-                mime: file.type 
-            });
-
-            // Чтение и отправка чанками
-            const CHUNK_SIZE = 16384; // 16KB (безопасный размер для WebRTC)
-            let offset = 0;
-
-            // Используем FileReader для чтения
-            const reader = new FileReader();
-            
-            const sendNextChunk = () => {
-                if (offset < file.size) {
-                    const slice = file.slice(offset, offset + CHUNK_SIZE);
-                    reader.readAsArrayBuffer(slice);
-                } else {
-                    conn.send({ type: 'END' });
-                    log(`✅ Раздача завершена для ${conn.peer}`, 'success');
-                }
+        // Функция сохранения игры на ТВОЙ сервер
+        async function saveGame() {
+            const gameData = {
+                title: document.getElementById('title').value,
+                desc: document.getElementById('desc').value,
+                fileUrl: document.getElementById('fileUrl').value,
+                coverUrl: document.getElementById('coverUrl').value
             };
 
-            reader.onload = (e) => {
-                conn.send({
-                    type: 'CHUNK',
-                    data: e.target.result
-                });
-                offset += CHUNK_SIZE;
-                // Небольшая задержка, чтобы не забить буфер канала
-                if (conn.bufferSize > 1024 * 1024) { // Если буфер > 1MB
-                    setTimeout(sendNextChunk, 50);
-                } else {
-                    sendNextChunk();
-                }
-            };
-
-            sendNextChunk();
-        }
-
-        // --- ЛОГИКА ПРИЛОЖЕНИЯ ---
-
-        function switchTab(t) {
-            activeTab = t;
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`tab-${t}`).classList.add('active');
-            
-            document.getElementById('dev-panel').classList.toggle('hidden', t !== 'dev');
-            loadGames(); // Перерисовать список
-        }
-
-        // 1. ПУБЛИКАЦИЯ ИГРЫ
-        async function publishGame() {
-            const title = document.getElementById('g-title').value;
-            const desc = document.getElementById('g-desc').value;
-            const price = document.getElementById('g-price').value;
-            const imgFile = document.getElementById('g-image').files[0];
-            const gameFile = document.getElementById('g-file').files[0];
-
-            if (!title || !gameFile || !imgFile) return alert("Заполните все поля!");
-
             try {
-                log("⏳ Загрузка обложки и метаданных...", 'info');
-
-                // 1. Грузим картинку в облако (это ок, она маленькая)
-                const imgRef = storage.ref(`covers/${Date.now()}_${imgFile.name}`);
-                await imgRef.put(imgFile);
-                const imgUrl = await imgRef.getDownloadURL();
-
-                // 2. Создаем запись в БД (БЕЗ ССЫЛКИ НА ФАЙЛ ИГРЫ)
-                const newGameRef = db.ref('games').push();
-                const gameId = newGameRef.key;
-
-                await newGameRef.set({
-                    title, description: desc, price: price || 0,
-                    author: user.uid,
-                    authorEmail: user.email,
-                    imageUrl: imgUrl,
-                    fileName: gameFile.name,
-                    fileSize: gameFile.size,
-                    createdAt: firebase.database.ServerValue.TIMESTAMP
+                const response = await fetch(`${SERVER_URL}/games`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(gameData)
                 });
 
-                // 3. Добавляем файл в локальную память для раздачи
-                hostedFiles[gameId] = gameFile;
-                updateHostingCount();
-                loadMySeedingList(); // Обновить список раздач
-
-                log("✅ Игра опубликована! Вы на раздаче.", 'success');
-                alert("Опубликовано! Не закрывайте вкладку, чтобы пользователи могли скачать.");
-                
-                // Очистка формы
-                document.getElementById('g-title').value = '';
-                document.getElementById('g-file').value = '';
-
-            } catch (e) {
-                log("Ошибка: " + e.message, 'error');
+                if (response.ok) {
+                    alert('Игра успешно сохранена на вашем сервере!');
+                    location.reload();
+                }
+            } catch (err) {
+                alert('Ошибка: убедитесь, что сервер сессий запущен на ноуте (порт 3000)');
+                console.error(err);
             }
         }
 
-        // 2. ЗАГРУЗКА СПИСКА ИГР
-        function loadGames() {
-            const list = document.getElementById('game-list');
-            list.innerHTML = '';
-            
-            db.ref('games').once('value', snap => {
-                const games = [];
-                snap.forEach(c => games.push({id: c.key, ...c.val()}));
+        // Функция загрузки игр из базы данных MongoDB на ноуте
+        async function loadGames() {
+            try {
+                const response = await fetch(`${SERVER_URL}/games`);
+                const games = await response.json();
                 
-                games.forEach(g => {
-                    const isMine = g.author === user.uid;
-                    if (activeTab === 'dev' && !isMine) return;
-                    if (activeTab === 'lib') return; // Для простоты пока все в магазине
+                const list = document.getElementById('gamesList');
+                list.innerHTML = '';
 
+                games.forEach(game => {
                     list.innerHTML += `
-                        <div class="steam-card p-4 flex gap-4 hover:bg-white/5 transition">
-                            <img src="${g.imageUrl}" class="w-32 h-20 object-cover rounded bg-gray-800">
-                            <div class="flex-1">
-                                <div class="flex justify-between">
-                                    <h4 class="font-bold text-lg">${g.title}</h4>
-                                    <span class="text-blue-400 font-bold">${g.price > 0 ? g.price + ' ₽' : 'Free'}</span>
-                                </div>
-                                <p class="text-gray-400 text-sm mb-2">${g.description}</p>
-                                <div class="flex items-center justify-between mt-2">
-                                    <span class="text-xs text-gray-500">💿 ${(g.fileSize/1024/1024).toFixed(1)} MB</span>
-                                    ${isMine 
-                                        ? '<span class="text-green-500 text-xs">Ваш проект</span>' 
-                                        : `<button onclick="startDownload('${g.id}', '${g.author}')" class="bg-blue-600 px-4 py-1 rounded text-sm hover:bg-blue-500">СКАЧАТЬ (P2P)</button>`
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            });
-        }
-
-        // 3. ЛОГИКА "ЦЕНТРА РАЗДАЧИ" (Чтобы восстановить файл после F5)
-        function loadMySeedingList() {
-            const container = document.getElementById('seeding-list');
-            container.innerHTML = '';
-
-            db.ref('games').orderByChild('author').equalTo(user.uid).once('value', snap => {
-                snap.forEach(c => {
-                    const g = c.val();
-                    const gid = c.key;
-                    const isHosted = !!hostedFiles[gid];
-
-                    container.innerHTML += `
-                        <div class="flex items-center justify-between bg-black/30 p-3 rounded border ${isHosted ? 'border-green-500/30' : 'border-red-500/30'}">
+                        <div class="game-card">
+                            <img src="${game.coverUrl || 'https://via.placeholder.com/150'}" alt="cover">
                             <div>
-                                <div class="font-bold">${g.title}</div>
-                                <div class="text-xs ${isHosted ? 'text-green-400' : 'text-red-400'}">
-                                    ${isHosted ? '🟢 Раздается' : '🔴 Не раздается (выберите файл)'}
-                                </div>
+                                <h2>${game.title}</h2>
+                                <p>${game.desc}</p>
+                                <a href="${game.fileUrl}" class="btn" target="_blank">Скачать с сервера</a>
                             </div>
-                            ${!isHosted ? `
-                                <div class="relative overflow-hidden">
-                                    <button class="bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-xs">Выбрать файл</button>
-                                    <input type="file" onchange="restoreSeed('${gid}', this)" class="absolute inset-0 opacity-0 cursor-pointer">
-                                </div>
-                            ` : ''}
                         </div>
                     `;
                 });
-            });
-        }
-
-        function restoreSeed(gameId, input) {
-            if (input.files[0]) {
-                hostedFiles[gameId] = input.files[0];
-                updateHostingCount();
-                loadMySeedingList();
-                log(`Файл для игры ${gameId} восстановлен в память.`, 'success');
+            } catch (err) {
+                document.getElementById('gamesList').innerHTML = '<p style="color:red">Не удалось подключиться к серверу на ноутбуке.</p>';
             }
         }
 
-        // 4. СКАЧИВАНИЕ (КЛИЕНТ)
-        async function startDownload(gameId, authorUid) {
-            log("🔎 Поиск автора в сети...", 'info');
-            
-            // 1. Получаем PeerId автора из базы
-            const snap = await db.ref(`users/${authorUid}`).get();
-            const authorData = snap.val();
-
-            if (!authorData || !authorData.peerId) {
-                return alert("Автор игры сейчас оффлайн. Скачивание невозможно.");
-            }
-
-            const modal = document.getElementById('download-modal');
-            modal.classList.remove('hidden');
-            const statusEl = document.getElementById('dl-status');
-            const barEl = document.getElementById('dl-bar');
-
-            statusEl.innerText = "Подключение к ПК автора...";
-
-            // 2. Соединяемся с PeerJS автора
-            const conn = peer.connect(authorData.peerId);
-
-            let receivedSize = 0;
-            let totalSize = 0;
-            let chunks = [];
-            let startTime = Date.now();
-
-            conn.on('open', () => {
-                log("🔗 Подключено к автору. Запрашиваю файл...", 'success');
-                statusEl.innerText = "Запрос файла...";
-                conn.send({ type: 'REQUEST_FILE', gameId: gameId });
-            });
-
-            conn.on('data', (data) => {
-                if (data.type === 'META') {
-                    totalSize = data.size;
-                    statusEl.innerText = `Скачивание: ${data.name}`;
-                    log(`Получены метаданные: ${data.name}, ${data.size} bytes`, 'info');
-                }
-                else if (data.type === 'CHUNK') {
-                    chunks.push(data.data);
-                    receivedSize += data.data.byteLength;
-                    
-                    // Обновляем UI
-                    const percent = (receivedSize / totalSize) * 100;
-                    barEl.style.width = `${percent}%`;
-                    document.getElementById('dl-percent').innerText = Math.round(percent) + '%';
-                    
-                    // Скорость
-                    const elapsed = (Date.now() - startTime) / 1000;
-                    const speed = (receivedSize / 1024 / 1024) / elapsed;
-                    document.getElementById('dl-speed').innerText = speed.toFixed(1) + ' MB/s';
-                }
-                else if (data.type === 'END') {
-                    statusEl.innerText = "Сборка файла...";
-                    log("✅ Загрузка завершена. Сохранение...", 'success');
-                    
-                    const blob = new Blob(chunks);
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    // Имя файла берем из описания игры или дефолтное
-                    a.download = "game_downloaded_via_diesel_p2p"; 
-                    a.click();
-                    
-                    setTimeout(() => modal.classList.add('hidden'), 2000);
-                    conn.close();
-                }
-                else if (data.type === 'ERROR') {
-                    alert("Ошибка от хоста: " + data.message);
-                    modal.classList.add('hidden');
-                }
-            });
-
-            conn.on('error', (err) => {
-                alert("Ошибка соединения: " + err);
-                modal.classList.add('hidden');
-            });
-        }
-
-        // Утилиты UI
-        let activeConns = 0;
-        function updateConnCount(n) {
-            activeConns += n;
-            document.getElementById('conn-count').innerText = activeConns;
-        }
-        function updateHostingCount() {
-            document.getElementById('hosting-count').innerText = Object.keys(hostedFiles).length;
-        }
-
+        window.onload = loadGames;
     </script>
 </body>
 </html>
